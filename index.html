@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Check-in Rezerwacje GOK Leżajsk</title>
+    <title>Check-in Koncert Mieczysław Szcześniak</title>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
         * {
@@ -133,6 +133,20 @@
             margin-bottom: 5px;
         }
         
+        .seats-container {
+            margin-top: 15px;
+            border-top: 1px dashed #ddd;
+            padding-top: 15px;
+        }
+        
+        .seat-item {
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            border-left: 3px solid #3498db;
+        }
+        
         .status {
             text-align: center;
             padding: 10px;
@@ -182,12 +196,12 @@
             margin-top: 30px;
             padding-top: 20px;
             border-top: 1px solid #eee;
-            color: #7f8c8d;
+            color: #fff;
             font-size: 14px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            background-color: #f0f0f0;
+            background-color: #000;
             border-radius: 8px;
             padding: 15px;
         }
@@ -231,7 +245,7 @@
     <div class="container">
         <header>
             <img src="https://biletygoklezajsk.baj24.pl/wp-content/uploads/2025/09/logo-gok.png" alt="Logo GOK" class="logo">
-            <h1>Rezerwacje GOK Leżajsk</h1>
+            <h1>check-in Koncert Mieczysław Szcześniak</h1>
         </header>
         
         <div class="scanner-section">
@@ -352,12 +366,12 @@
                     
                     const data = await response.json();
                     
-                    // Wyszukiwanie rezerwacji po identyfikatorze
-                    const reservation = data.find(item => item['Identyfikator rezerwacji'] === decodedText);
+                    // Wyszukiwanie WSZYSTKICH rezerwacji po identyfikatorze
+                    const reservations = data.filter(item => item['Identyfikator rezerwacji'] === decodedText);
                     
-                    if (reservation) {
-                        displayReservationDetails(reservation);
-                        showStatus('Rezerwacja znaleziona pomyślnie!', 'scanned');
+                    if (reservations.length > 0) {
+                        displayReservationDetails(reservations);
+                        showStatus('Znaleziono ' + reservations.length + ' rezerwacji dla tego identyfikatora!', 'scanned');
                     } else {
                         showStatus('Nie znaleziono rezerwacji o podanym identyfikatorze: ' + decodedText, 'error');
                     }
@@ -369,34 +383,52 @@
                 }
             }
             
-            // Wyświetlanie szczegółów rezerwacji (tylko wybrane pola)
-            function displayReservationDetails(reservation) {
+            // Wyświetlanie szczegółów rezerwacji (dla wielu miejsc)
+            function displayReservationDetails(reservations) {
                 let html = '';
                 
-                // Sprawdzamy, które pola istnieją w rezerwacji i wyświetlamy tylko wybrane
-                if (reservation['Numer miejsca']) {
-                    html += `
-                        <div class="detail-item">
-                            <strong>Numer miejsca</strong>
-                            <span>${reservation['Numer miejsca'] || 'Brak danych'}</span>
-                        </div>
-                    `;
-                }
+                // Używamy pierwszej rezerwacji do danych ogólnych (nazwa, email)
+                const firstReservation = reservations[0];
                 
-                if (reservation['Nazwa']) {
+                if (firstReservation['Nazwa']) {
                     html += `
                         <div class="detail-item">
                             <strong>Nazwa</strong>
-                            <span>${reservation['Nazwa'] || 'Brak danych'}</span>
+                            <span>${firstReservation['Nazwa'] || 'Brak danych'}</span>
                         </div>
                     `;
                 }
                 
-                if (reservation['Email']) {
+                if (firstReservation['Email']) {
                     html += `
                         <div class="detail-item">
                             <strong>Email</strong>
-                            <span>${reservation['Email'] || 'Brak danych'}</span>
+                            <span>${firstReservation['Email'] || 'Brak danych'}</span>
+                        </div>
+                    `;
+                }
+                
+                // Wyświetlamy wszystkie miejsca
+                if (reservations.some(r => r['Numer miejsca'])) {
+                    let seatsHtml = '';
+                    
+                    reservations.forEach((reservation, index) => {
+                        if (reservation['Numer miejsca']) {
+                            seatsHtml += `
+                                <div class="seat-item">
+                                    <strong>Miejsce ${index + 1}</strong>
+                                    <span>${reservation['Numer miejsca']}</span>
+                                </div>
+                            `;
+                        }
+                    });
+                    
+                    html += `
+                        <div class="detail-item">
+                            <strong>Zarezerwowane miejsca (${reservations.length})</strong>
+                            <div class="seats-container">
+                                ${seatsHtml}
+                            </div>
                         </div>
                     `;
                 }
@@ -422,7 +454,7 @@
                 resultSection.style.display = 'none';
             }
             
-            // Ukrywanie animacji ładowaning
+            // Ukrywanie animacji ładowania
             function hideLoading() {
                 loadingElement.style.display = 'none';
             }
