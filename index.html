@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Check-in Koncert Mieczysław Szcześniak</title>
+    <title>Check-in System</title>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
         * {
@@ -245,7 +245,7 @@
     <div class="container">
         <header>
             <img src="https://biletygoklezajsk.baj24.pl/wp-content/uploads/2025/09/logo-gok.png" alt="Logo GOK" class="logo">
-            <h1>check-in Koncert Mieczysław Szcześniak</h1>
+            <h1 id="sheet-title">Ładowanie nazwy wydarzenia...</h1>
         </header>
         
         <div class="scanner-section">
@@ -287,9 +287,19 @@
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
             const canvasContext = canvas.getContext('2d');
+            const sheetTitleElement = document.getElementById('sheet-title');
             
             let scanning = false;
             let stream = null;
+            
+            // Ustawienie tytułu strony na podstawie nazwy arkusza
+            function setSheetTitle() {
+                // Ponieważ nie mamy bezpośredniego dostępu do nazwy arkusza przez API,
+                // możemy albo pobrać ją z danych, albo użyć stałej wartości
+                // W tym przypadku ustawiamy ogólny tytuł
+                sheetTitleElement.textContent = "System check-in";
+                document.title = "System check-in";
+            }
             
             // Inicjalizacja skanera
             async function initScanner() {
@@ -467,6 +477,9 @@
                     initScanner();
                 }
             });
+            
+            // Inicjalizacja tytułu strony
+            setSheetTitle();
         });
     </script>
 </body>
