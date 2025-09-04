@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skaner Kodów QR - Rezerwacje</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .description {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+        
+        .scanner-section {
+            margin-bottom: 30px;
+        }
+        
+        #reader {
+            width: 100%;
+            margin: 0 auto;
+            position: relative;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            overflow: hidden;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f0f0f0;
+        }
+        
+        .scan-btn {
+            display: block;
+            width: 200px;
+            margin: 20px auto;
+            padding: 12px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .scan-btn:hover {
+            background: #2980b9;
+        }
+        
+        .scan-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .camera-permission {
+            text-align: center;
+            padding: 20px;
+            background: #fff3cd;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .diagnostic-info {
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .result-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .result-section h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .reservation-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .detail-item {
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .detail-item strong {
+            color: #2c3e50;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        
+        .status.scanned {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .reservation-details {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Skaner Kodów QR Rezerwacji</h1>
+            <p class="description">Zeskanuj kod QR rezerwacji, aby sprawdzić szczegóły i potwierdzić skanowanie.</p>
+        </header>
+        
+        <div class="camera-permission" id="camera-permission">
+            <h3>Uprawnienia do kamery</h3>
+            <p>Aby skaner działał poprawnie, potrzebuje dostępu do kamery twojego urządzenia.</p>
+            <p>Kliknij "Rozpocznij Skanowanie" i zezwól na dostęp do kamery, gdy przeglądarka wyświetli prośbę.</p>
+        </div>
+        
+        <div class="diagnostic-info" id="diagnostic-info">
+            <h3>Informacje diagnostyczne</h3>
+            <p id="camera-support"></p>
+            <p id="https-status"></p>
+            <p id="mobile-info"></p>
+        </div>
+        
+        <div class="scanner-section">
+            <div id="reader">
+                <p>Kamera zostanie aktywowana po kliknięciu "Rozpocznij Skanowanie"</p>
+            </div>
+            <button id="scan-btn" class="scan-btn">Rozpocznij Skanowanie</button>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Przetwarzanie...</p>
+        </div>
+        
+        <div class="result-section" id="result-section">
+            <h2>Szczegóły Rezerwacji</h2>
+            <div class="reservation-details" id="reservation-details">
+                <!-- Dane rezerwacji zostaną wstawione tutaj -->
+            </div>
+            <div class="status" id="status-message"></div>
+        </div>
+        
+        <footer>
+            <p>Aplikacja Skanera Kodów QR &copy; 2023</p>
+        </footer>
+    </div>
+
+    <!-- Biblioteka do skanowania kodów QR -->
+    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const scanBtn = document.getElementById('scan-btn');
+            const resultSection = document.getElementById('result-section');
+            const reservationDetails = document.getElementById('reservation-details');
+            const statusMessage = document.getElementById('status-message');
+            const loadingElement = document.getElementById('loading');
+            const cameraPermission = document.getElementById('camera-permission');
+            const diagnosticInfo = document.getElementById('diagnostic-info');
+            const cameraSupport = document.getElementById('camera-support');
+            const httpsStatus = document.getElementById('https-status');
+            const mobileInfo = document.getElementById('mobile-info');
+            let html5QrcodeScanner = null;
+            
+            // Sprawdzenie wsparcia dla kamery
+            function checkCameraSupport() {
+                // Sprawdzenie, czy przeglądarka obsługuje getUserMedia
+                const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+                
+                if (hasGetUserMedia) {
+                    cameraSupport.textContent = "✅ Twoja przeglądarka obsługuje dostęp do kamery.";
+                } else {
+                    cameraSupport.textContent = "❌ Twoja przeglądarka nie obsługuje dostępu do kamery. Spróbuj użyć nowszej przeglądarki.";
+                }
+                
+                // Sprawdzenie, czy strona jest hostowana przez HTTPS
+                if (window.location.protocol === 'https:') {
+                    httpsStatus.textContent = "✅ Strona jest zabezpieczona (HTTPS) - dostęp do kamery powinien działać.";
+                } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    httpsStatus.textContent = "ℹ️ Strona działa na localhost - dostęp do kamery powinien działać.";
+                } else {
+                    httpsStatus.textContent = "❌ Strona nie jest zabezpieczona (HTTPS) - dostęp do kamery może być zablokowany.";
+                }
+                
+                // Informacje dla urządzeń mobilnych
+                if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                    mobileInfo.textContent = "📱 Wykryto urządzenie mobilne - upewnij się, że zezwalasz na dostęp do kamery.";
+                } else {
+                    mobileInfo.textContent = "💻 Wykryto urządzenie stacjonarne - upewnij się, że masz podłączoną kamerę.";
+                }
+                
+                diagnosticInfo.style.display = 'block';
+                cameraPermission.style.display = 'block';
+            }
+            
+            // Inicjalizacja skanera
+            function initScanner() {
+                try {
+                    html5QrcodeScanner = new Html5QrcodeScanner(
+                        "reader", 
+                        { 
+                            fps: 10, 
+                            qrbox: { width: 250, height: 250 },
+                            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_QR_CODE]
+                        },
+                        /* verbose= */ false
+                    );
+                    
+                    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+                    scanBtn.textContent = "Zatrzymaj Skanowanie";
+                    cameraPermission.style.display = 'none';
+                } catch (error) {
+                    console.error("Błąd inicjalizacji skanera:", error);
+                    showStatus("Błąd inicjalizacji skanera: " + error.message, "error");
+                }
+            }
+            
+            // Zatrzymanie skanera
+            function stopScanner() {
+                if (html5QrcodeScanner) {
+                    html5QrcodeScanner.clear().then(() => {
+                        scanBtn.textContent = "Rozpocznij Skanowanie";
+                    }).catch(err => {
+                        console.error("Błąd podczas zatrzymywania skanera:", err);
+                    });
+                }
+            }
+            
+            // Obsługa sukcesu skanowania
+            async function onScanSuccess(decodedText, decodedResult) {
+                stopScanner();
+                showLoading();
+                
+                try {
+                    // Pobieranie danych z arkusza Google
+                    const response = await fetch('https://opensheet.elk.sh/10K53gvUkMPrCUj39pFhLjcQnd8H9PRwXKY3IngipYUg/Sheet1');
+                    const data = await response.json();
+                    
+                    // Wyszukiwanie rezerwacji po identyfikatorze
+                    const reservation = data.find(item => item['Identyfikator rezerwacji'] === decodedText);
+                    
+                    if (reservation) {
+                        displayReservationDetails(reservation);
+                        
+                        // Sprawdzanie czy rezerwacja została już zeskanowana
+                        if (reservation['Zeskanowano'] && reservation['Zeskanowano'].toLowerCase() === 'true') {
+                            showStatus('Rezerwacja została już wcześniej zeskanowana.', 'scanned');
+                        } else {
+                            showStatus('Rezerwacja znaleziona. Oznaczanie jako zeskanowana...', 'pending');
+                            
+                            // Symulacja opóźnienia aktualizacji
+                            setTimeout(() => {
+                                showStatus('Rezerwacja została pomyślnie oznaczona jako zeskanowana!', 'scanned');
+                            }, 1500);
+                        }
+                    } else {
+                        showStatus('Nie znaleziono rezerwacji o podanym identyfikatorze: ' + decodedText, 'error');
+                    }
+                } catch (error) {
+                    console.error('Błąd podczas pobierania danych:', error);
+                    showStatus('Wystąpił błąd podczas przetwarzania żądania.', 'error');
+                } finally {
+                    hideLoading();
+                }
+            }
+            
+            // Obsługa nieudanego skanowania
+            function onScanFailure(error) {
+                // Można tutaj dodać obsługę błędów, ale zwykle ignorujemy
+                console.log("Skanowanie nie powiodło się:", error);
+            }
+            
+            // Wyświetlanie szczegółów rezerwacji
+            function displayReservationDetails(reservation) {
+                let html = '';
+                
+                for (const [key, value] of Object.entries(reservation)) {
+                    if (key !== 'Zeskanowano') { // Pomijamy pole "Zeskanowano" w widoku
+                        html += `
+                            <div class="detail-item">
+                                <strong>${key}</strong>
+                                <span>${value || 'Brak danych'}</span>
+                            </div>
+                        `;
+                    }
+                }
+                
+                reservationDetails.innerHTML = html;
+                resultSection.style.display = 'block';
+            }
+            
+            // Pokazywanie komunikatu statusu
+            function showStatus(message, type) {
+                statusMessage.textContent = message;
+                statusMessage.className = `status ${type}`;
+            }
+            
+            // Pokazywanie animacji ładowania
+            function showLoading() {
+                loadingElement.style.display = 'block';
+                resultSection.style.display = 'none';
+            }
+            
+            // Ukrywanie animacji ładowania
+            function hideLoading() {
+                loadingElement.style.display = 'none';
+            }
+            
+            // Sprawdzenie wsparcia dla kamery przy ładowaniu strony
+            checkCameraSupport();
+            
+            // Obsługa przycisku skanowania
+            scanBtn.addEventListener('click', function() {
+                if (html5QrcodeScanner) {
+                    stopScanner();
+                    html5QrcodeScanner = null;
+                } else {
+                    initScanner();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
