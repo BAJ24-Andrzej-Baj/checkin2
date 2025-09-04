@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skaner Kodów QR - Rezerwacje</title>
+    <title>Check-in GOK Gminy Leżajsk</title>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
         * {
@@ -34,16 +34,21 @@
             margin-bottom: 30px;
             padding-bottom: 20px;
             border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        
+        .logo {
+            max-width: 200px;
+            margin-bottom: 15px;
         }
         
         h1 {
             color: #2c3e50;
             margin-bottom: 10px;
-        }
-        
-        .description {
-            color: #7f8c8d;
-            margin-bottom: 20px;
+            font-size: 24px;
         }
         
         .scanner-section {
@@ -92,22 +97,6 @@
         .scan-btn:disabled {
             background: #95a5a6;
             cursor: not-allowed;
-        }
-        
-        .camera-permission {
-            text-align: center;
-            padding: 20px;
-            background: #fff3cd;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
-        
-        .diagnostic-info {
-            background: #f8f9fa;
-            border-left: 4px solid #3498db;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
         }
         
         .debug-info {
@@ -204,6 +193,14 @@
             border-top: 1px solid #eee;
             color: #7f8c8d;
             font-size: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .footer-logo {
+            max-width: 150px;
+            margin-top: 15px;
         }
         
         .scan-line {
@@ -229,29 +226,19 @@
             .reservation-details {
                 grid-template-columns: 1fr;
             }
+            
+            h1 {
+                font-size: 20px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Skaner Kodów QR Rezerwacji</h1>
-            <p class="description">Zeskanuj kod QR rezerwacji, aby sprawdzić szczegóły.</p>
+            <img src="https://biletygoklezajsk.baj24.pl/wp-content/uploads/2025/09/logo-gok.png" alt="Logo GOK" class="logo">
+            <h1>check-in GOK Gminy Leżajsk</h1>
         </header>
-        
-        <div class="camera-permission">
-            <h3>Uprawnienia do kamery</h3>
-            <p>Aby skaner działał poprawnie, potrzebuje dostępu do kamery twojego urządzenia.</p>
-            <p>Kliknij "Rozpocznij Skanowanie" i zezwól na dostęp do kamery, gdy przeglądarka wyświetli prośbę.</p>
-        </div>
-        
-        <div class="diagnostic-info">
-            <h3>Ważne informacje</h3>
-            <p>✅ Aplikacja używa biblioteki jsQR do skanowania kodów QR</p>
-            <p>✅ Wymagane jest zezwolenie na dostęp do kamery</p>
-            <p>✅ Działa na urządzeniach mobilnych i desktopowych</p>
-            <p>✅ Wymagane jest połączenie HTTPS (lub localhost)</p>
-        </div>
         
         <div class="debug-info" id="debug-info">
             <h3>Informacje diagnostyczne</h3>
@@ -281,7 +268,10 @@
         </div>
         
         <footer>
-            <p>Aplikacja Skanera Kodów QR &copy; 2023 | Działa na jsQR</p>
+            <p>Rezerwacje z arkusza: Rezerwacje GOK Leżajsk</p>
+            <a href="https://baj24.pl" target="_blank">
+                <img src="https://biletygoklezajsk.baj24.pl/wp-content/uploads/2025/09/proj-3.png" alt="Logo Baj24" class="footer-logo">
+            </a>
         </footer>
     </div>
 
@@ -412,17 +402,41 @@
                 }
             }
             
-            // Wyświetlanie szczegółów rezerwacji
+            // Wyświetlanie szczegółów rezerwacji (tylko wybrane pola)
             function displayReservationDetails(reservation) {
                 let html = '';
                 
-                for (const [key, value] of Object.entries(reservation)) {
+                // Sprawdzamy, które pola istnieją w rezerwacji i wyświetlamy tylko wybrane
+                if (reservation['Numer miejsca']) {
                     html += `
                         <div class="detail-item">
-                            <strong>${key}</strong>
-                            <span>${value || 'Brak danych'}</span>
+                            <strong>Numer miejsca</strong>
+                            <span>${reservation['Numer miejsca'] || 'Brak danych'}</span>
                         </div>
                     `;
+                }
+                
+                if (reservation['Nazwa']) {
+                    html += `
+                        <div class="detail-item">
+                            <strong>Nazwa</strong>
+                            <span>${reservation['Nazwa'] || 'Brak danych'}</span>
+                        </div>
+                    `;
+                }
+                
+                if (reservation['Email']) {
+                    html += `
+                        <div class="detail-item">
+                            <strong>Email</strong>
+                            <span>${reservation['Email'] || 'Brak danych'}</span>
+                        </div>
+                    `;
+                }
+                
+                // Jeśli żadne z oczekiwanych pól nie istnieje, wyświetlamy informację
+                if (html === '') {
+                    html = `<div class="detail-item"><strong>Brak danych do wyświetlenia</strong></div>`;
                 }
                 
                 reservationDetails.innerHTML = html;
@@ -441,7 +455,7 @@
                 resultSection.style.display = 'none';
             }
             
-            // Ukrywanie animacji ładowania
+            // Ukrywanie animacji ładowaning
             function hideLoading() {
                 loadingElement.style.display = 'none';
             }
@@ -457,7 +471,6 @@
             
             // Testowe dane do debugowania
             showDebugInfo("Aplikacja została załadowana");
-            showDebugInfo("ID testowe z arkusza: R001, R002, R003");
         });
     </script>
 </body>
