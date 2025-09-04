@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Check-in System</title>
+    <title>System check-in</title>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
         * {
@@ -170,6 +170,17 @@
             color: #856404;
         }
         
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+            font-weight: bold;
+        }
+        
         .loading {
             text-align: center;
             padding: 20px;
@@ -257,6 +268,10 @@
             <button id="scan-btn" class="scan-btn">Rozpocznij Skanowanie</button>
         </div>
         
+        <div class="error-message" id="error-message">
+            Nie znaleziono rezerwacji
+        </div>
+        
         <div class="loading" id="loading">
             <div class="spinner"></div>
             <p>Wyszukiwanie rezerwacji...</p>
@@ -284,6 +299,7 @@
             const reservationDetails = document.getElementById('reservation-details');
             const statusMessage = document.getElementById('status-message');
             const loadingElement = document.getElementById('loading');
+            const errorMessage = document.getElementById('error-message');
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
             const canvasContext = canvas.getContext('2d');
@@ -292,13 +308,51 @@
             let scanning = false;
             let stream = null;
             
-            // Ustawienie tytułu strony na podstawie nazwy arkusza
-            function setSheetTitle() {
-                // Ponieważ nie mamy bezpośredniego dostępu do nazwy arkusza przez API,
-                // możemy albo pobrać ją z danych, albo użyć stałej wartości
-                // W tym przypadku ustawiamy ogólny tytuł
-                sheetTitleElement.textContent = "System check-in";
-                document.title = "System check-in";
+            // Ukrywanie komunikatu o błędzie
+            function hideError() {
+                errorMessage.style.display = 'none';
+            }
+            
+            // Pokazywanie komunikatu o błędzie
+            function showError() {
+                errorMessage.style.display = 'block';
+                resultSection.style.display = 'none';
+            }
+            
+            // Pobieranie nazwy arkusza
+            async function getSheetTitle() {
+                try {
+                    // Pobieranie danych z arkusza Google
+                    const response = await fetch('https://opensheet.elk.sh/10K53gvUkMPrCUj39pFhLjcQnd8H9PRwXKY3IngipYUg/Sheet1');
+                    
+                    if (!response.ok) {
+                        throw new Error('Błąd pobierania danych: ' + response.status);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Jeśli mamy dane, ustawiamy nazwę arkusza
+                    if (data && data.length > 0) {
+                        // Sprawdzamy, czy w danych jest pole z nazwą wydarzenia
+                        const firstRow = data[0];
+                        if (firstRow['Wydarzenie'] || firstRow['Event']) {
+                            const eventName = firstRow['Wydarzenie'] || firstRow['Event'];
+                            sheetTitleElement.textContent = `Check-in: ${eventName}`;
+                            document.title = `Check-in: ${eventName}`;
+                        } else {
+                            // Jeśli nie ma konkretnego pola, używamy ogólnej nazwy
+                            sheetTitleElement.textContent = "System check-in";
+                            document.title = "System check-in";
+                        }
+                    } else {
+                        sheetTitleElement.textContent = "System check-in";
+                        document.title = "System check-in";
+                    }
+                } catch (error) {
+                    console.error('Błąd pobierania nazwy arkusza:', error);
+                    sheetTitleElement.textContent = "System check-in";
+                    document.title = "System check-in";
+                }
             }
             
             // Inicjalizacja skanera
@@ -365,6 +419,7 @@
             async function onScanSuccess(decodedText) {
                 stopScanner();
                 showLoading();
+                hideError();
                 
                 try {
                     // Pobieranie danych z arkusza Google
@@ -383,7 +438,7 @@
                         displayReservationDetails(reservations);
                         showStatus('Znaleziono ' + reservations.length + ' rezerwacji dla tego identyfikatora!', 'scanned');
                     } else {
-                        showStatus('Nie znaleziono rezerwacji o podanym identyfikatorze: ' + decodedText, 'error');
+                        showError();
                     }
                 } catch (error) {
                     console.error('Błąd podczas pobierania danych:', error);
@@ -473,13 +528,14 @@
             scanBtn.addEventListener('click', function() {
                 if (scanning) {
                     stopScanner();
+                    hideError();
                 } else {
                     initScanner();
                 }
             });
             
-            // Inicjalizacja tytułu strony
-            setSheetTitle();
+            // Inicjalizacja aplikacji
+            getSheetTitle();
         });
     </script>
 </body>
