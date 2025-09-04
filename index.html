@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Skaner Kodów QR - Rezerwacje</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -47,20 +48,27 @@
         
         .scanner-section {
             margin-bottom: 30px;
+            text-align: center;
         }
         
-        #reader {
+        #video-container {
             width: 100%;
+            max-width: 500px;
             margin: 0 auto;
             position: relative;
             border: 2px solid #3498db;
             border-radius: 8px;
             overflow: hidden;
-            min-height: 300px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f0f0f0;
+        }
+        
+        #video {
+            width: 100%;
+            background: #000;
+            display: block;
+        }
+        
+        #canvas {
+            display: none;
         }
         
         .scan-btn {
@@ -92,7 +100,6 @@
             background: #fff3cd;
             border-radius: 8px;
             margin: 20px 0;
-            display: none;
         }
         
         .diagnostic-info {
@@ -101,7 +108,6 @@
             padding: 15px;
             margin: 20px 0;
             border-radius: 4px;
-            display: none;
         }
         
         .result-section {
@@ -191,6 +197,21 @@
             font-size: 14px;
         }
         
+        .scan-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background-color: #3498db;
+            top: 50%;
+            animation: scan 2s infinite ease-in-out;
+        }
+        
+        @keyframes scan {
+            0% { top: 20%; }
+            50% { top: 80%; }
+            100% { top: 20%; }
+        }
+        
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
@@ -209,22 +230,25 @@
             <p class="description">Zeskanuj kod QR rezerwacji, aby sprawdzić szczegóły i potwierdzić skanowanie.</p>
         </header>
         
-        <div class="camera-permission" id="camera-permission">
+        <div class="camera-permission">
             <h3>Uprawnienia do kamery</h3>
             <p>Aby skaner działał poprawnie, potrzebuje dostępu do kamery twojego urządzenia.</p>
             <p>Kliknij "Rozpocznij Skanowanie" i zezwól na dostęp do kamery, gdy przeglądarka wyświetli prośbę.</p>
         </div>
         
-        <div class="diagnostic-info" id="diagnostic-info">
-            <h3>Informacje diagnostyczne</h3>
-            <p id="camera-support"></p>
-            <p id="https-status"></p>
-            <p id="mobile-info"></p>
+        <div class="diagnostic-info">
+            <h3>Ważne informacje</h3>
+            <p>✅ Aplikacja używa nowej biblioteki do skanowania kodów QR</p>
+            <p>✅ Wymagane jest zezwolenie na dostęp do kamery</p>
+            <p>✅ Działa na urządzeniach mobilnych i desktopowych</p>
+            <p>✅ Wymagane jest połączenie HTTPS (lub localhost)</p>
         </div>
         
         <div class="scanner-section">
-            <div id="reader">
-                <p>Kamera zostanie aktywowana po kliknięciu "Rozpocznij Skanowanie"</p>
+            <div id="video-container">
+                <video id="video" playsinline></video>
+                <div class="scan-line"></div>
+                <canvas id="canvas"></canvas>
             </div>
             <button id="scan-btn" class="scan-btn">Rozpocznij Skanowanie</button>
         </div>
@@ -243,13 +267,10 @@
         </div>
         
         <footer>
-            <p>Aplikacja Skanera Kodów QR &copy; 2023</p>
+            <p>Aplikacja Skanera Kodów QR &copy; 2023 | Działa na jsQR</p>
         </footer>
     </div>
 
-    <!-- Biblioteka do skanowania kodów QR -->
-    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
-    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const scanBtn = document.getElementById('scan-btn');
@@ -257,79 +278,75 @@
             const reservationDetails = document.getElementById('reservation-details');
             const statusMessage = document.getElementById('status-message');
             const loadingElement = document.getElementById('loading');
-            const cameraPermission = document.getElementById('camera-permission');
-            const diagnosticInfo = document.getElementById('diagnostic-info');
-            const cameraSupport = document.getElementById('camera-support');
-            const httpsStatus = document.getElementById('https-status');
-            const mobileInfo = document.getElementById('mobile-info');
-            let html5QrcodeScanner = null;
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const canvasContext = canvas.getContext('2d');
             
-            // Sprawdzenie wsparcia dla kamery
-            function checkCameraSupport() {
-                // Sprawdzenie, czy przeglądarka obsługuje getUserMedia
-                const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-                
-                if (hasGetUserMedia) {
-                    cameraSupport.textContent = "✅ Twoja przeglądarka obsługuje dostęp do kamery.";
-                } else {
-                    cameraSupport.textContent = "❌ Twoja przeglądarka nie obsługuje dostępu do kamery. Spróbuj użyć nowszej przeglądarki.";
-                }
-                
-                // Sprawdzenie, czy strona jest hostowana przez HTTPS
-                if (window.location.protocol === 'https:') {
-                    httpsStatus.textContent = "✅ Strona jest zabezpieczona (HTTPS) - dostęp do kamery powinien działać.";
-                } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    httpsStatus.textContent = "ℹ️ Strona działa na localhost - dostęp do kamery powinien działać.";
-                } else {
-                    httpsStatus.textContent = "❌ Strona nie jest zabezpieczona (HTTPS) - dostęp do kamery może być zablokowany.";
-                }
-                
-                // Informacje dla urządzeń mobilnych
-                if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-                    mobileInfo.textContent = "📱 Wykryto urządzenie mobilne - upewnij się, że zezwalasz na dostęp do kamery.";
-                } else {
-                    mobileInfo.textContent = "💻 Wykryto urządzenie stacjonarne - upewnij się, że masz podłączoną kamerę.";
-                }
-                
-                diagnosticInfo.style.display = 'block';
-                cameraPermission.style.display = 'block';
-            }
+            let scanning = false;
+            let stream = null;
             
             // Inicjalizacja skanera
-            function initScanner() {
+            async function initScanner() {
                 try {
-                    html5QrcodeScanner = new Html5QrcodeScanner(
-                        "reader", 
-                        { 
-                            fps: 10, 
-                            qrbox: { width: 250, height: 250 },
-                            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_QR_CODE]
-                        },
-                        /* verbose= */ false
-                    );
+                    // Prośba o dostęp do kamery
+                    stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: "environment" } 
+                    });
                     
-                    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+                    video.srcObject = stream;
+                    video.setAttribute("playsinline", true); // Important for iOS
+                    await video.play();
+                    
+                    // Dostosowanie rozmiaru canvas do wideo
+                    video.addEventListener('loadedmetadata', function() {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                    });
+                    
                     scanBtn.textContent = "Zatrzymaj Skanowanie";
-                    cameraPermission.style.display = 'none';
+                    scanning = true;
+                    requestAnimationFrame(tick);
+                    
                 } catch (error) {
-                    console.error("Błąd inicjalizacji skanera:", error);
-                    showStatus("Błąd inicjalizacji skanera: " + error.message, "error");
+                    console.error("Błąd dostępu do kamery:", error);
+                    showStatus("Błąd dostępu do kamery: " + error.message, "error");
                 }
             }
             
             // Zatrzymanie skanera
             function stopScanner() {
-                if (html5QrcodeScanner) {
-                    html5QrcodeScanner.clear().then(() => {
-                        scanBtn.textContent = "Rozpocznij Skanowanie";
-                    }).catch(err => {
-                        console.error("Błąd podczas zatrzymywania skanera:", err);
-                    });
+                scanning = false;
+                scanBtn.textContent = "Rozpocznij Skanowanie";
+                
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    stream = null;
                 }
             }
             
+            // Główna pętla skanowania
+            function tick() {
+                if (!scanning) return;
+                
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    // Rysowanie klatki wideo na canvas
+                    canvasContext.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    // Pobieranie danych obrazu do analizy
+                    const imageData = canvasContext.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+                    
+                    if (code) {
+                        // Znaleziono kod QR
+                        onScanSuccess(code.data);
+                    }
+                }
+                
+                requestAnimationFrame(tick);
+            }
+            
             // Obsługa sukcesu skanowania
-            async function onScanSuccess(decodedText, decodedResult) {
+            async function onScanSuccess(decodedText) {
                 stopScanner();
                 showLoading();
                 
@@ -364,12 +381,6 @@
                 } finally {
                     hideLoading();
                 }
-            }
-            
-            // Obsługa nieudanego skanowania
-            function onScanFailure(error) {
-                // Można tutaj dodać obsługę błędów, ale zwykle ignorujemy
-                console.log("Skanowanie nie powiodło się:", error);
             }
             
             // Wyświetlanie szczegółów rezerwacji
@@ -408,14 +419,10 @@
                 loadingElement.style.display = 'none';
             }
             
-            // Sprawdzenie wsparcia dla kamery przy ładowaniu strony
-            checkCameraSupport();
-            
             // Obsługa przycisku skanowania
             scanBtn.addEventListener('click', function() {
-                if (html5QrcodeScanner) {
+                if (scanning) {
                     stopScanner();
-                    html5QrcodeScanner = null;
                 } else {
                     initScanner();
                 }
