@@ -227,7 +227,7 @@
     <div class="container">
         <header>
             <h1>Skaner Kodów QR Rezerwacji</h1>
-            <p class="description">Zeskanuj kod QR rezerwacji, aby sprawdzić szczegóły i potwierdzić skanowanie.</p>
+            <p class="description">Zeskanuj kod QR rezerwacji, aby sprawdzić szczegóły.</p>
         </header>
         
         <div class="camera-permission">
@@ -238,7 +238,7 @@
         
         <div class="diagnostic-info">
             <h3>Ważne informacje</h3>
-            <p>✅ Aplikacja używa nowej biblioteki do skanowania kodów QR</p>
+            <p>✅ Aplikacja używa biblioteki jsQR do skanowania kodów QR</p>
             <p>✅ Wymagane jest zezwolenie na dostęp do kamery</p>
             <p>✅ Działa na urządzeniach mobilnych i desktopowych</p>
             <p>✅ Wymagane jest połączenie HTTPS (lub localhost)</p>
@@ -255,7 +255,7 @@
         
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>Przetwarzanie...</p>
+            <p>Wyszukiwanie rezerwacji...</p>
         </div>
         
         <div class="result-section" id="result-section">
@@ -360,18 +360,7 @@
                     
                     if (reservation) {
                         displayReservationDetails(reservation);
-                        
-                        // Sprawdzanie czy rezerwacja została już zeskanowana
-                        if (reservation['Zeskanowano'] && reservation['Zeskanowano'].toLowerCase() === 'true') {
-                            showStatus('Rezerwacja została już wcześniej zeskanowana.', 'scanned');
-                        } else {
-                            showStatus('Rezerwacja znaleziona. Oznaczanie jako zeskanowana...', 'pending');
-                            
-                            // Symulacja opóźnienia aktualizacji
-                            setTimeout(() => {
-                                showStatus('Rezerwacja została pomyślnie oznaczona jako zeskanowana!', 'scanned');
-                            }, 1500);
-                        }
+                        showStatus('Rezerwacja znaleziona pomyślnie!', 'scanned');
                     } else {
                         showStatus('Nie znaleziono rezerwacji o podanym identyfikatorze: ' + decodedText, 'error');
                     }
@@ -388,14 +377,12 @@
                 let html = '';
                 
                 for (const [key, value] of Object.entries(reservation)) {
-                    if (key !== 'Zeskanowano') { // Pomijamy pole "Zeskanowano" w widoku
-                        html += `
-                            <div class="detail-item">
-                                <strong>${key}</strong>
-                                <span>${value || 'Brak danych'}</span>
-                            </div>
-                        `;
-                    }
+                    html += `
+                        <div class="detail-item">
+                            <strong>${key}</strong>
+                            <span>${value || 'Brak danych'}</span>
+                        </div>
+                    `;
                 }
                 
                 reservationDetails.innerHTML = html;
